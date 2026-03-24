@@ -1,0 +1,5 @@
+streamlit==1.44.1
+faster-whisper==1.1.1
+moviepy==2.1.2
+imageio[ffmpeg]==2.37.0
+ctranslate2==4.6.0
