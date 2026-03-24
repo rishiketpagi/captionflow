@@ -6,6 +6,7 @@ def format_timestamp(seconds):
 
     return f"{hours:02}:{minutes:02}:{secs:02},{milliseconds:03}"
 
+
 def generate_srt(segments):
     srt_text = ""
 

@@ -2,3 +2,4 @@ streamlit
 faster-whisper
 moviepy
 imageio[ffmpeg]
+deep-translator

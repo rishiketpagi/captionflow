@@ -1,33 +1,44 @@
 # 🎬 CaptionFlow – AI Video Subtitle Generator
 
-CaptionFlow is an AI-powered web application that automatically generates subtitles from uploaded videos.
-The app extracts audio, transcribes speech using Faster-Whisper, and produces a downloadable `.srt` subtitle file.
+CaptionFlow is an AI-powered Streamlit web application that generates subtitles from uploaded videos.
 
-🔗 Live App: https://rishiketpagi-captionflow.streamlit.app
-🔗 GitHub Repo: https://github.com/rishiketpagi/captionflow
+It can:
+- extract audio from video
+- transcribe speech into text
+- generate timestamped `.srt` subtitle files
+- provide plain transcript text for copy/download
+- translate subtitles into other languages such as Hindi, Marathi, Spanish, and more
+
+## 🚀 Live App
+[Open CaptionFlow](https://rishiketpagi-captionflow.streamlit.app)
+
+## 📂 GitHub Repository
+[CaptionFlow Repository](https://github.com/rishiketpagi/captionflow)
 
 ---
 
-## 🚀 Features
+## ✨ Features
 
-* Upload video files (MP4, MOV, AVI, MKV)
-* Automatic audio extraction
-* Speech-to-text transcription using Faster-Whisper
-* Subtitle generation with timestamps
-* Download subtitles as `.srt`
-* Clean modern UI with custom styling
-* Works directly in browser
+- Upload video files (`.mp4`, `.mov`, `.avi`, `.mkv`)
+- AI speech-to-text transcription using Faster-Whisper
+- Subtitle generation in `.srt` format
+- Plain transcript text output
+- Download transcript as `.txt`
+- Multilingual subtitle translation
+- Modern website-like UI using Streamlit + custom CSS
+- Browser-based usage with no local UI setup needed
 
 ---
 
 ## 🧠 Tech Stack
 
-* Python
-* Streamlit
-* Faster-Whisper
-* MoviePy
-* ImageIO
-* Custom CSS
+- Python
+- Streamlit
+- Faster-Whisper
+- MoviePy
+- ImageIO
+- Deep Translator
+- Custom CSS
 
 ---
 

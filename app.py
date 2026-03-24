@@ -1,8 +1,11 @@
-import streamlit as st
 import os
+import streamlit as st
+
 from video_utils import extract_audio_from_video
 from transcriber import transcribe_audio
 from subtitle_generator import generate_srt
+from translator_utils import translate_segments, translate_full_text
+
 
 st.set_page_config(
     page_title="CaptionFlow",
@@ -20,7 +23,7 @@ st.markdown("""
     }
 
     .block-container {
-        max-width: 1050px;
+        max-width: 1100px;
         padding-top: 1.2rem;
         padding-bottom: 2rem;
     }
@@ -138,20 +141,58 @@ st.markdown("""
         color: #cbd5e1;
         margin-top: 1.2rem;
     }
+
+    .note-box {
+        background: rgba(59,130,246,0.12);
+        border: 1px solid rgba(96,165,250,0.22);
+        color: #dbeafe;
+        border-radius: 14px;
+        padding: 0.8rem 1rem;
+        margin-top: 0.7rem;
+        font-size: 0.92rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------- COMPACT HEADER --------------------
+# -------------------- MAPPINGS --------------------
+audio_language_map = {
+    "Auto Detect": None,
+    "English": "en",
+    "Hindi": "hi",
+    "Marathi": "mr",
+    "Tamil": "ta",
+    "Telugu": "te",
+    "Bengali": "bn",
+    "Spanish": "es",
+    "French": "fr",
+    "German": "de"
+}
+
+subtitle_language_map = {
+    "Original": None,
+    "English": "en",
+    "Hindi": "hi",
+    "Marathi": "mr",
+    "Tamil": "ta",
+    "Telugu": "te",
+    "Bengali": "bn",
+    "Spanish": "es",
+    "French": "fr",
+    "German": "de"
+}
+
+# -------------------- HEADER --------------------
 st.markdown("""
 <div class="topbar">
     <div class="app-title">🎬 CaptionFlow</div>
     <div class="app-subtitle">
-        Upload a video and generate subtitle files automatically using AI.
+        Upload a video, transcribe the speech, translate subtitles into another language,
+        and download the final subtitle file.
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# -------------------- MAIN TOOL FIRST --------------------
+# -------------------- MAIN TOOL SECTION --------------------
 st.markdown('<div class="glass-card">', unsafe_allow_html=True)
 st.markdown('<div class="section-title">Generate subtitles</div>', unsafe_allow_html=True)
 
@@ -173,6 +214,19 @@ with col2:
         ["tiny", "base", "small"],
         index=0
     )
+
+    selected_audio_language = st.selectbox(
+        "Audio language",
+        list(audio_language_map.keys()),
+        index=0
+    )
+
+    selected_subtitle_language = st.selectbox(
+        "Generate subtitles in",
+        list(subtitle_language_map.keys()),
+        index=0
+    )
+
     st.markdown(
         "<div class='mini-text'>Use <b>tiny</b> for faster cloud performance.</div>",
         unsafe_allow_html=True
@@ -181,7 +235,10 @@ with col2:
 generate = st.button("🚀 Generate Subtitles", use_container_width=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------- PROCESS ONLY IF BOTH AVAILABLE --------------------
+audio_language_code = audio_language_map[selected_audio_language]
+subtitle_language_code = subtitle_language_map[selected_subtitle_language]
+
+# -------------------- MAIN APP LOGIC --------------------
 if uploaded_file is not None:
     os.makedirs("uploads", exist_ok=True)
     os.makedirs("audio", exist_ok=True)
@@ -201,11 +258,11 @@ if uploaded_file is not None:
         st.markdown('</div>', unsafe_allow_html=True)
 
     with details_col:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">File details</div>', unsafe_allow_html=True)
-
         ext = uploaded_file.name.split(".")[-1].upper()
         size_mb = round(uploaded_file.size / (1024 * 1024), 2)
+
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">File details</div>', unsafe_allow_html=True)
 
         st.markdown(f"""
         <div class="metric-box">
@@ -228,6 +285,13 @@ if uploaded_file is not None:
         </div>
         """, unsafe_allow_html=True)
 
+        st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-number">{selected_subtitle_language}</div>
+            <div class="metric-label">Output</div>
+        </div>
+        """, unsafe_allow_html=True)
+
         st.warning("Best performance: short videos under 1 minute.")
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -239,29 +303,67 @@ if uploaded_file is not None:
             with st.spinner("Extracting audio from video..."):
                 extract_audio_from_video(video_path, audio_path)
 
-            with st.spinner("Transcribing speech with AI..."):
-                segments = transcribe_audio(audio_path, model_size=model_size)
+            with st.spinner("Transcribing audio..."):
+                segments, full_text = transcribe_audio(
+                    audio_path=audio_path,
+                    model_size=model_size,
+                    language=audio_language_code,
+                    task="transcribe"
+                )
 
-            with st.spinner("Creating subtitle file..."):
-                srt_content = generate_srt(segments)
+            detected_language = "Unknown"
+            if segments:
+                detected_language = selected_audio_language if selected_audio_language != "Auto Detect" else "Detected Automatically"
 
-            srt_filename = os.path.splitext(uploaded_file.name)[0] + ".srt"
+            final_segments = segments
+            final_text = full_text
+
+            if subtitle_language_code is not None:
+                with st.spinner(f"Translating subtitles to {selected_subtitle_language}..."):
+                    final_segments = translate_segments(
+                        segments=segments,
+                        target_language=subtitle_language_code
+                    )
+                    final_text = translate_full_text(
+                        text=full_text,
+                        target_language=subtitle_language_code
+                    )
+
+            with st.spinner("Generating subtitle file..."):
+                srt_content = generate_srt(final_segments)
+
+            base_name = os.path.splitext(uploaded_file.name)[0]
+            srt_filename = f"{base_name}_{selected_subtitle_language.lower().replace(' ', '_')}.srt"
+            txt_filename = f"{base_name}_{selected_subtitle_language.lower().replace(' ', '_')}_transcript.txt"
 
             st.success("✅ Subtitles generated successfully!")
 
-            tab1, tab2 = st.tabs(["Subtitle File", "Transcript Segments"])
+            st.markdown(f"""
+            <div class="note-box">
+                <b>Audio language:</b> {selected_audio_language} <br>
+                <b>Subtitle output:</b> {selected_subtitle_language}
+            </div>
+            """, unsafe_allow_html=True)
+
+            tab1, tab2, tab3 = st.tabs([
+                "📄 Subtitle File",
+                "📝 Transcript Text",
+                "⏱ Transcript Segments"
+            ])
 
             with tab1:
                 st.markdown('<div class="glass-card">', unsafe_allow_html=True)
                 st.markdown('<div class="section-title">Generated SRT</div>', unsafe_allow_html=True)
+
                 st.text_area(
-                    "Generated subtitle text",
+                    "Generated subtitle file",
                     srt_content,
                     height=340,
                     label_visibility="collapsed"
                 )
+
                 st.download_button(
-                    "⬇ Download Subtitle File",
+                    "⬇ Download Subtitle File (.srt)",
                     data=srt_content,
                     file_name=srt_filename,
                     mime="text/plain",
@@ -271,9 +373,29 @@ if uploaded_file is not None:
 
             with tab2:
                 st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-                st.markdown('<div class="section-title">Transcript segments</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Transcript Text</div>', unsafe_allow_html=True)
 
-                for i, seg in enumerate(segments[:25], start=1):
+                st.text_area(
+                    "Full transcript text",
+                    final_text,
+                    height=320,
+                    label_visibility="collapsed"
+                )
+
+                st.download_button(
+                    "⬇ Download Transcript (.txt)",
+                    data=final_text,
+                    file_name=txt_filename,
+                    mime="text/plain",
+                    use_container_width=True
+                )
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with tab3:
+                st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">Transcript Segments</div>', unsafe_allow_html=True)
+
+                for i, seg in enumerate(final_segments[:40], start=1):
                     st.markdown(f"""
                     <div style="
                         background: rgba(255,255,255,0.05);
@@ -299,9 +421,9 @@ if uploaded_file is not None:
 elif generate:
     st.error("Please upload a video first.")
 
-# -------------------- SMALL FOOTER ONLY --------------------
+# -------------------- FOOTER --------------------
 st.markdown("""
 <div class="footer-box">
-    Built with Streamlit, MoviePy, and Faster-Whisper • Designed by Rishiket Pagi
+    Built with Streamlit, MoviePy, Faster-Whisper, and Deep Translator • Designed by Rishiket Pagi
 </div>
 """, unsafe_allow_html=True)
