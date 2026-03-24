@@ -104,9 +104,7 @@ Steps:
 ---
 
 ## 👨‍💻 Author
-
 Rishiket Pagi
-Computer Engineering Student
 
 GitHub: https://github.com/rishiketpagi
 LinkedIn: https://www.linkedin.com/in/rishiket-pagi
